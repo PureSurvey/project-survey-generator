@@ -49,3 +49,9 @@ func (s *SqlReader) Connect() error {
 func (s *SqlReader) GetStoredProcedureResult(storedProcedure string) (*sql.Rows, error) {
 	return s.db.Query(fmt.Sprintf("exec %v", storedProcedure))
 }
+
+func (s *SqlReader) CloseConnection() {
+	if s.db != nil {
+		s.db.Close()
+	}
+}

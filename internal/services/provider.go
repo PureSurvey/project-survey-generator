@@ -22,7 +22,7 @@ type Provider struct {
 func NewProvider(appConfiguration *configuration.AppConfiguration) contracts.IServiceProvider {
 	dbReader := reader.NewSqlReader(appConfiguration.DbConnectionString)
 	dbRepo := dbcache.NewRepo(dbReader)
-	dbRepo.Reload()
+	go dbRepo.RunReloadCycle()
 
 	sbPool := pools.NewStringBuilderPool()
 

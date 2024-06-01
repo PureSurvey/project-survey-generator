@@ -4,9 +4,11 @@ import (
 	"project-survey-generator/internal/dbcache/contracts"
 	"project-survey-generator/internal/dbcache/objects"
 	"slices"
+	"time"
 )
 
 const (
+	sleepTime           = 30 * time.Second
 	storedProcedureName = "generator_01"
 )
 
@@ -19,8 +21,16 @@ func NewRepo(reader contracts.IReader) *Repo {
 	return &Repo{reader: reader}
 }
 
-func (r *Repo) Reload() {
+func (r *Repo) RunReloadCycle() {
+	for {
+		r.reload()
+		time.Sleep(sleepTime)
+	}
+}
+
+func (r *Repo) reload() {
 	err := r.reader.Connect()
+	defer r.reader.CloseConnection()
 	if err != nil {
 		return
 	}
