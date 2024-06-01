@@ -3,6 +3,7 @@ package dbcache
 import (
 	"project-survey-generator/internal/dbcache/contracts"
 	"project-survey-generator/internal/dbcache/objects"
+	"slices"
 )
 
 const (
@@ -32,7 +33,9 @@ func (r *Repo) Reload() {
 		Questions:   map[int]*objects.Question{},
 		Options:     map[int]*objects.Option{},
 
-		SurveysByUnit: map[int][]*objects.Survey{},
+		SurveysByUnit:     map[int][]*objects.Survey{},
+		QuestionsBySurvey: map[int][]*objects.Question{},
+		OptionsByQuestion: map[int][]*objects.Option{},
 
 		TranslationsByQuestionLine: map[int]map[string]*objects.Translation{},
 		TranslationsByOption:       map[int]map[string]*objects.Translation{},
@@ -109,4 +112,40 @@ func (r *Repo) GetUnitById(id int) *objects.Unit {
 
 func (r *Repo) GetSurveysByUnitId(id int) []*objects.Survey {
 	return r.cache.SurveysByUnit[id]
+}
+
+func (r *Repo) GetQuestionsBySurveyId(id int) []*objects.Question {
+	return r.cache.QuestionsBySurvey[id]
+}
+
+func (r *Repo) GetOptionsByQuestionId(id int) []*objects.Option {
+	return r.cache.OptionsByQuestion[id]
+}
+
+func (r *Repo) GetUnitSurveysWithIds(unitId int, surveysIds []int) []*objects.Survey {
+	surveys := r.cache.SurveysByUnit[unitId]
+	var matchedSurveys []*objects.Survey
+	for _, survey := range surveys {
+		if slices.Contains(surveysIds, survey.Id) {
+			matchedSurveys = append(matchedSurveys, survey)
+		}
+	}
+
+	return matchedSurveys
+}
+
+func (r *Repo) GetAppearanceById(id int) *objects.Appearance {
+	return r.cache.Appearances[id]
+}
+
+func (r *Repo) GetTemplateById(id int) *objects.Template {
+	return r.cache.Templates[id]
+}
+
+func (r *Repo) GetTranslationsByQuestionLineId(id int) map[string]*objects.Translation {
+	return r.cache.TranslationsByQuestionLine[id]
+}
+
+func (r *Repo) GetTranslationsByOptionId(id int) map[string]*objects.Translation {
+	return r.cache.TranslationsByOption[id]
 }

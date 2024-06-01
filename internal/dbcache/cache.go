@@ -2,6 +2,7 @@ package dbcache
 
 import (
 	"database/sql"
+	"encoding/json"
 	"project-survey-generator/internal/dbcache/objects"
 	"project-survey-generator/internal/enums"
 )
@@ -14,7 +15,9 @@ type Cache struct {
 	Questions   map[int]*objects.Question
 	Options     map[int]*objects.Option
 
-	SurveysByUnit map[int][]*objects.Survey
+	SurveysByUnit     map[int][]*objects.Survey
+	QuestionsBySurvey map[int][]*objects.Question
+	OptionsByQuestion map[int][]*objects.Option
 
 	TranslationsByQuestionLine map[int]map[string]*objects.Translation
 	TranslationsByOption       map[int]map[string]*objects.Translation
@@ -41,14 +44,13 @@ func (c *Cache) fillUnits(rows *sql.Rows) error {
 func (c *Cache) fillSurveys(rows *sql.Rows) error {
 	for rows.Next() {
 		var id int
-		var name string
 
-		err := rows.Scan(&id, &name)
+		err := rows.Scan(&id)
 		if err != nil {
 			return err
 		}
 
-		survey := objects.NewSurvey(id, name)
+		survey := objects.NewSurvey(id)
 		c.Surveys[id] = survey
 	}
 
@@ -76,14 +78,26 @@ func (c *Cache) fillSurveyInUnits(rows *sql.Rows) error {
 func (c *Cache) fillTemplates(rows *sql.Rows) error {
 	for rows.Next() {
 		var id int
-		var code, defaultParams string
+		var code, defaultParamsString string
 
-		err := rows.Scan(&id, &code, &defaultParams)
+		err := rows.Scan(&id, &code, &defaultParamsString)
 		if err != nil {
 			return err
 		}
 
-		template := objects.NewTemplate(id, code, defaultParams)
+		var templateCode objects.TemplateCode
+		err = json.Unmarshal([]byte(code), &templateCode)
+		if err != nil {
+			return err
+		}
+
+		var defaultParams map[string]string
+		err = json.Unmarshal([]byte(defaultParamsString), &defaultParams)
+		if err != nil {
+			return err
+		}
+
+		template := objects.NewTemplate(id, &templateCode, defaultParams)
 		c.Templates[id] = template
 	}
 
@@ -93,9 +107,15 @@ func (c *Cache) fillTemplates(rows *sql.Rows) error {
 func (c *Cache) fillAppearances(rows *sql.Rows) error {
 	for rows.Next() {
 		var id, aType, templateId int
-		var params string
+		var paramsString string
 
-		err := rows.Scan(&id, &aType, &templateId, &params)
+		err := rows.Scan(&id, &aType, &templateId, &paramsString)
+		if err != nil {
+			return err
+		}
+
+		var params map[string]string
+		err = json.Unmarshal([]byte(paramsString), &params)
 		if err != nil {
 			return err
 		}
@@ -116,8 +136,9 @@ func (c *Cache) fillQuestions(rows *sql.Rows) error {
 			return err
 		}
 
-		question := objects.NewQuestion(id, enums.EnumQuestionType(qType), surveyId, orderNumber, questionLineId)
+		question := objects.NewQuestion(id, enums.QuestionType(qType), surveyId, orderNumber, questionLineId)
 		c.Questions[id] = question
+		c.QuestionsBySurvey[surveyId] = append(c.QuestionsBySurvey[surveyId], question)
 	}
 
 	return nil
@@ -134,6 +155,7 @@ func (c *Cache) fillOptions(rows *sql.Rows) error {
 
 		option := objects.NewOption(id, questionId, orderNumber)
 		c.Options[id] = option
+		c.OptionsByQuestion[questionId] = append(c.OptionsByQuestion[questionId], option)
 	}
 
 	return nil
@@ -149,7 +171,7 @@ func (c *Cache) fillQuestionTranslations(rows *sql.Rows) error {
 			return err
 		}
 
-		translation := objects.NewTranslation(id, lang, translationLine, questionLineId)
+		translation := objects.NewTranslation(id, translationLine, lang, questionLineId)
 
 		if c.TranslationsByQuestionLine[questionLineId] == nil {
 			c.TranslationsByQuestionLine[questionLineId] = map[string]*objects.Translation{}
@@ -171,7 +193,7 @@ func (c *Cache) fillOptionTranslations(rows *sql.Rows) error {
 			return err
 		}
 
-		translation := objects.NewTranslation(id, lang, translationLine, optionId)
+		translation := objects.NewTranslation(id, translationLine, lang, optionId)
 
 		if c.TranslationsByOption[optionId] == nil {
 			c.TranslationsByOption[optionId] = map[string]*objects.Translation{}
