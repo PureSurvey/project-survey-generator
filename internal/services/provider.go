@@ -20,8 +20,8 @@ type Provider struct {
 }
 
 func NewProvider(appConfiguration *configuration.AppConfiguration) contracts.IServiceProvider {
-	dbReader := reader.NewSqlReader(appConfiguration.DbConnectionString)
-	dbRepo := dbcache.NewRepo(dbReader)
+	dbReader := reader.NewSqlReader(appConfiguration.DbCacheConfiguration)
+	dbRepo := dbcache.NewRepo(appConfiguration.DbCacheConfiguration, dbReader)
 	go dbRepo.RunReloadCycle()
 
 	sbPool := pools.NewStringBuilderPool()

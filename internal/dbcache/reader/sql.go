@@ -6,37 +6,33 @@ import (
 	"fmt"
 	_ "github.com/microsoft/go-mssqldb"
 	"log"
+	"project-survey-generator/internal/configuration"
 	"time"
 )
 
-const (
-	retryCount     = 3
-	retrySleepTime = 10 * time.Second
-)
-
 type SqlReader struct {
-	connectionString string
-	db               *sql.DB
+	config *configuration.DbCacheConfiguration
+	db     *sql.DB
 }
 
-func NewSqlReader(connectionString string) *SqlReader {
-	return &SqlReader{connectionString: connectionString}
+func NewSqlReader(config *configuration.DbCacheConfiguration) *SqlReader {
+	return &SqlReader{config: config}
 }
 
 func (s *SqlReader) Connect() error {
 	var err error
-	s.db, err = sql.Open("sqlserver", s.connectionString)
+	s.db, err = sql.Open("sqlserver", s.config.ConnectionString)
 	if err != nil {
 		log.Fatal("Error creating connection pool: ", err.Error())
 		return err
 	}
 
 	ctx := context.Background()
-	for i := 0; i < retryCount; i++ {
+	for i := 0; i < s.config.ConnectionRetryCount; i++ {
 		err = s.db.PingContext(ctx)
 		if err != nil {
-			log.Println("Error when connecting to DB:", err.Error(), "Try", i+1, "of", retryCount)
-			time.Sleep(retrySleepTime)
+			log.Println("Error when connecting to DB:", err.Error(), "Try", i+1, "of", s.config.ConnectionRetryCount)
+			time.Sleep(time.Duration(s.config.ConnectionRetrySleepTime) * time.Second)
 		}
 	}
 	if err != nil {

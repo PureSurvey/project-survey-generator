@@ -1,30 +1,27 @@
 package dbcache
 
 import (
+	"project-survey-generator/internal/configuration"
 	"project-survey-generator/internal/dbcache/contracts"
 	"project-survey-generator/internal/dbcache/objects"
 	"slices"
 	"time"
 )
 
-const (
-	sleepTime           = 30 * time.Second
-	storedProcedureName = "generator_01"
-)
-
 type Repo struct {
+	config *configuration.DbCacheConfiguration
 	reader contracts.IReader
 	cache  *Cache
 }
 
-func NewRepo(reader contracts.IReader) *Repo {
-	return &Repo{reader: reader}
+func NewRepo(config *configuration.DbCacheConfiguration, reader contracts.IReader) *Repo {
+	return &Repo{reader: reader, config: config}
 }
 
 func (r *Repo) RunReloadCycle() {
 	for {
 		r.reload()
-		time.Sleep(sleepTime)
+		time.Sleep(time.Duration(r.config.ReloadSleepTime) * time.Second)
 	}
 }
 
@@ -51,7 +48,7 @@ func (r *Repo) reload() {
 		TranslationsByOption:       map[int]map[string]*objects.Translation{},
 	}
 
-	res, err := r.reader.GetStoredProcedureResult(storedProcedureName)
+	res, err := r.reader.GetStoredProcedureResult(r.config.StoredProcedure)
 	i := 0
 	for cont := true; cont; cont = res.NextResultSet() {
 		switch i {
