@@ -1,9 +1,9 @@
 package enums
 
-type EnumQuestionType int
+type QuestionType int
 
 const (
-	QTUnknown EnumQuestionType = iota
+	QTUnknown QuestionType = iota
 	QTRadiobutton
 	QTCheckbox
 )

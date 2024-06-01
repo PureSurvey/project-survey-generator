@@ -8,10 +8,10 @@ type Appearance struct {
 	Id         int
 	Type       enums.EnumAppearanceType
 	TemplateId int
-	Params     string
+	Params     map[string]string
 }
 
-func NewAppearance(id int, aType enums.EnumAppearanceType, templateId int, params string) *Appearance {
+func NewAppearance(id int, aType enums.EnumAppearanceType, templateId int, params map[string]string) *Appearance {
 	return &Appearance{
 		Id:         id,
 		Type:       aType,
