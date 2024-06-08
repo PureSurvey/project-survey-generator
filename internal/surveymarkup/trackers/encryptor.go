@@ -75,10 +75,13 @@ func (e *Encryptor) getStringFromEvent(event *model.Event) string {
 	}
 
 	if event.ValidQuestionsWithAnswers != nil && len(event.ValidQuestionsWithAnswers) > 0 {
+		var validQuestionsWithAnswers []string
 		for key, val := range event.ValidQuestionsWithAnswers {
-			validQuestionsString := fmt.Sprintf("%v:%v", key, join(val, ";"))
-			params[5] = validQuestionsString
+			questionWithAnswers := fmt.Sprintf("%v:%v", key, join(val, ";"))
+			validQuestionsWithAnswers = append(validQuestionsWithAnswers, questionWithAnswers)
 		}
+
+		params[5] = strings.Join(validQuestionsWithAnswers, "/")
 	}
 
 	return strings.Join(params[:], ",")
