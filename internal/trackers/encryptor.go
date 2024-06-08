@@ -1,16 +1,13 @@
 package trackers
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"project-survey-generator/internal/configuration"
+	"project-survey-generator/internal/crypto"
 	"project-survey-generator/internal/pools"
-	"project-survey-generator/internal/surveymarkup/model"
+	"project-survey-generator/internal/trackers/model"
 	"strconv"
 	"strings"
 )
@@ -27,37 +24,16 @@ func NewEncryptor(appConfig *configuration.AppConfiguration, sbPool *pools.Strin
 	return &Encryptor{encryptionKey: key, sbPool: sbPool}
 }
 
-func (e *Encryptor) EncryptEvent(event *model.Event) string {
+func (e *Encryptor) EncryptTracker(event *model.Tracker) string {
 	stringToEncrypt := e.getStringFromEvent(event)
 
-	encrypted, _ := encrypt(stringToEncrypt, e.encryptionKey)
+	encryptedBytes, _ := crypto.EncryptWithGCM(stringToEncrypt, e.encryptionKey)
+	encrypted := base64.URLEncoding.EncodeToString(encryptedBytes)
 
 	return encrypted
 }
 
-func encrypt(stringToEncrypt string, key []byte) (string, error) {
-	plaintext := []byte(stringToEncrypt)
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return "", err
-	}
-
-	aesGCM, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", err
-	}
-
-	nonce := make([]byte, aesGCM.NonceSize())
-	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		return "", err
-	}
-
-	ciphertext := aesGCM.Seal(nonce, nonce, plaintext, nil)
-	return base64.URLEncoding.EncodeToString(ciphertext), nil
-}
-
-func (e *Encryptor) getStringFromEvent(event *model.Event) string {
+func (e *Encryptor) getStringFromEvent(event *model.Tracker) string {
 	params := [8]string{}
 
 	params[0] = strconv.Itoa(int(event.EventType))

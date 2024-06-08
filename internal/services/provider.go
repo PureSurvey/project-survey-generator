@@ -8,14 +8,14 @@ import (
 	"project-survey-generator/internal/services/contracts"
 	"project-survey-generator/internal/surveymarkup"
 	"project-survey-generator/internal/surveymarkup/minifier"
-	"project-survey-generator/internal/surveymarkup/trackers"
+	trackers2 "project-survey-generator/internal/trackers"
 )
 
 type Provider struct {
 	dbRepo            *dbcache.Repo
 	generator         *surveymarkup.Generator
-	trackersGenerator *trackers.Generator
-	encryptor         *trackers.Encryptor
+	trackersGenerator *trackers2.Generator
+	encryptor         *trackers2.Encryptor
 	minifier          *minifier.Service
 }
 
@@ -26,8 +26,8 @@ func NewProvider(appConfiguration *configuration.AppConfiguration) contracts.ISe
 
 	sbPool := pools.NewStringBuilderPool()
 
-	encryptor := trackers.NewEncryptor(appConfiguration, sbPool)
-	trackersGenerator := trackers.NewGenerator(appConfiguration, encryptor, sbPool)
+	encryptor := trackers2.NewEncryptor(appConfiguration, sbPool)
+	trackersGenerator := trackers2.NewGenerator(appConfiguration, encryptor, sbPool)
 	minifier := minifier.NewService()
 
 	provider := &Provider{
