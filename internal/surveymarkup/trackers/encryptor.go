@@ -54,7 +54,7 @@ func encrypt(stringToEncrypt string, key []byte) (string, error) {
 	}
 
 	ciphertext := aesGCM.Seal(nonce, nonce, plaintext, nil)
-	return base64.StdEncoding.EncodeToString(ciphertext), nil
+	return base64.URLEncoding.EncodeToString(ciphertext), nil
 }
 
 func (e *Encryptor) getStringFromEvent(event *model.Event) string {
