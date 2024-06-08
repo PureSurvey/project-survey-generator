@@ -18,10 +18,10 @@ import (
 type Encryptor struct {
 	encryptionKey []byte
 
-	sbPool *pools.StringBuilderPool
+	sbPool *pools.StringBuilder
 }
 
-func NewEncryptor(appConfig *configuration.AppConfiguration, sbPool *pools.StringBuilderPool) *Encryptor {
+func NewEncryptor(appConfig *configuration.AppConfiguration, sbPool *pools.StringBuilder) *Encryptor {
 	key, _ := hex.DecodeString(appConfig.EncryptionSecret)
 
 	return &Encryptor{encryptionKey: key, sbPool: sbPool}

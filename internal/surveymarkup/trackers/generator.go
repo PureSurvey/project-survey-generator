@@ -16,11 +16,11 @@ const (
 
 type Generator struct {
 	appConfig *configuration.AppConfiguration
-	sbPool    *pools.StringBuilderPool
+	sbPool    *pools.StringBuilder
 	encryptor *Encryptor
 }
 
-func NewGenerator(appConfig *configuration.AppConfiguration, encryptor *Encryptor, sbPool *pools.StringBuilderPool) *Generator {
+func NewGenerator(appConfig *configuration.AppConfiguration, encryptor *Encryptor, sbPool *pools.StringBuilder) *Generator {
 	return &Generator{appConfig: appConfig, encryptor: encryptor, sbPool: sbPool}
 }
 

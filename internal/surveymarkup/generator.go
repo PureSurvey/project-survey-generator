@@ -24,7 +24,7 @@ type Generator struct {
 	dbRepo            *dbcache.Repo
 	trackersGenerator *trackers.Generator
 
-	stringBuilderPool *pools.StringBuilderPool
+	stringBuilderPool *pools.StringBuilder
 
 	appConfiguration *configuration.AppConfiguration
 	minifier         *minifier.Service
@@ -33,7 +33,7 @@ type Generator struct {
 const optionsNameLength = 8
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func NewGenerator(dbRepo *dbcache.Repo, trackersGenerator *trackers.Generator, minifier *minifier.Service, stringBuilderPool *pools.StringBuilderPool, appConfig *configuration.AppConfiguration) *Generator {
+func NewGenerator(dbRepo *dbcache.Repo, trackersGenerator *trackers.Generator, minifier *minifier.Service, stringBuilderPool *pools.StringBuilder, appConfig *configuration.AppConfiguration) *Generator {
 	return &Generator{dbRepo: dbRepo, trackersGenerator: trackersGenerator, minifier: minifier, stringBuilderPool: stringBuilderPool, appConfiguration: appConfig}
 }
 
