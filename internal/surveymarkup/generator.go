@@ -8,13 +8,14 @@ import (
 	"project-survey-generator/internal/dbcache"
 	"project-survey-generator/internal/dbcache/objects"
 	"project-survey-generator/internal/enums"
-	compilederrors "project-survey-generator/internal/errors"
+	internalerrors "project-survey-generator/internal/errors"
 	"project-survey-generator/internal/localisation"
 	"project-survey-generator/internal/pools"
-	appearance2 "project-survey-generator/internal/surveymarkup/appearance"
 	"project-survey-generator/internal/surveymarkup/macros"
 	"project-survey-generator/internal/surveymarkup/minifier"
-	"project-survey-generator/internal/surveymarkup/trackers"
+	"project-survey-generator/internal/surveymarkup/position"
+	"project-survey-generator/internal/trackers"
+	"project-survey-generator/internal/utils"
 	"sort"
 	"strconv"
 	"strings"
@@ -24,16 +25,18 @@ type Generator struct {
 	dbRepo            *dbcache.Repo
 	trackersGenerator *trackers.Generator
 
-	stringBuilderPool *pools.StringBuilderPool
+	stringBuilderPool *pools.StringBuilder
 
 	appConfiguration *configuration.AppConfiguration
 	minifier         *minifier.Service
 }
 
-const optionsNameLength = 8
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	optionsNameLength = 8
+	letterBytes       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+)
 
-func NewGenerator(dbRepo *dbcache.Repo, trackersGenerator *trackers.Generator, minifier *minifier.Service, stringBuilderPool *pools.StringBuilderPool, appConfig *configuration.AppConfiguration) *Generator {
+func NewGenerator(dbRepo *dbcache.Repo, trackersGenerator *trackers.Generator, minifier *minifier.Service, stringBuilderPool *pools.StringBuilder, appConfig *configuration.AppConfiguration) *Generator {
 	return &Generator{dbRepo: dbRepo, trackersGenerator: trackersGenerator, minifier: minifier, stringBuilderPool: stringBuilderPool, appConfiguration: appConfig}
 }
 
@@ -73,11 +76,11 @@ func (g *Generator) Generate(unit *objects.Unit, surveys []*objects.Survey, lang
 		for j, question := range questions {
 			options := g.dbRepo.GetOptionsByQuestionId(question.Id)
 			if options == nil {
-				return "", compilederrors.NoOptionsInQuestion
+				return "", internalerrors.NoOptionsInQuestion
 			}
 
 			questionIds = append(questionIds, question.Id)
-			optionIdsByQuestionIds[question.Id] = Map(options, func(t *objects.Option) int {
+			optionIdsByQuestionIds[question.Id] = utils.Map(options, func(t *objects.Option) int {
 				return t.Id
 			})
 
@@ -139,14 +142,14 @@ func (g *Generator) Generate(unit *objects.Unit, surveys []*objects.Survey, lang
 
 	switch appearance.Type {
 	case enums.ATLeft:
-		templateCode = strings.Replace(appearance2.Left, macros.SurveyPlacement, templateCode, 1)
-		scriptCode += appearance2.LeftScript
+		templateCode = strings.Replace(position.Left, macros.SurveyPlacement, templateCode, 1)
+		scriptCode += position.LeftScript
 	case enums.ATRight:
-		templateCode = strings.Replace(appearance2.Right, macros.SurveyPlacement, templateCode, 1)
-		scriptCode += appearance2.RightScript
+		templateCode = strings.Replace(position.Right, macros.SurveyPlacement, templateCode, 1)
+		scriptCode += position.RightScript
 	case enums.ATOverlay:
-		templateCode = strings.Replace(appearance2.Overlay, macros.SurveyPlacement, templateCode, 1)
-		scriptCode += appearance2.OverlayScript
+		templateCode = strings.Replace(position.Overlay, macros.SurveyPlacement, templateCode, 1)
+		scriptCode += position.OverlayScript
 	default:
 		break
 	}
@@ -163,7 +166,7 @@ func (g *Generator) Generate(unit *objects.Unit, surveys []*objects.Survey, lang
 	templateCode = strings.Replace(templateCode, "\r", " ", -1)
 	templateCode = html.EscapeString(templateCode)
 
-	templateCode = strings.Replace(appearance2.ResponseScript, macros.Html, templateCode, 1)
+	templateCode = strings.Replace(position.ResponseScript, macros.Html, templateCode, 1)
 	templateCode = strings.Replace(templateCode, macros.UnitId, strconv.Itoa(unit.Id), 1)
 	templateCode = strings.Replace(templateCode, macros.Script, scriptCode, 1)
 
@@ -175,12 +178,15 @@ func (g *Generator) generateQuestion(question *objects.Question, options []*obje
 
 	questionLineTranslations := g.dbRepo.GetTranslationsByQuestionLineId(question.QuestionLineId)
 	if questionLineTranslations == nil {
-		return "", compilederrors.TranslationNotFound
+		return "", internalerrors.TranslationNotFound
 	}
 
 	questionLineTranslation := questionLineTranslations[language]
 	if questionLineTranslation == nil {
-		return "", compilederrors.TranslationNotFound
+		questionLineTranslation = questionLineTranslations["en"]
+		if questionLineTranslation == nil {
+			return "", internalerrors.TranslationNotFound
+		}
 	}
 
 	questionCode = strings.Replace(questionCode, macros.QuestionBlockText, html.EscapeString(questionLineTranslation.Translation), 1)
@@ -209,7 +215,7 @@ func (g *Generator) generateQuestion(question *objects.Question, options []*obje
 	nextButtonCode = strings.Replace(nextButtonCode, macros.QuestionId, strconv.Itoa(question.Id), 1)
 
 	var prevButtonCode string
-	if !isFirstSurvey && question.OrderNumber != 1 {
+	if !isFirstSurvey || isFirstSurvey && question.OrderNumber != 1 {
 		prevButtonCode = template.Code.PrevButton
 		prevButtonText := localisation.PreviousButtonTextByLanguage[language]
 		prevButtonCode = strings.Replace(prevButtonCode, macros.PrevButtonText, prevButtonText, 1)
@@ -225,7 +231,7 @@ func (g *Generator) generateQuestion(question *objects.Question, options []*obje
 	} else if question.Type == enums.QTCheckbox {
 		optionsType = "checkbox"
 	} else {
-		return "", compilederrors.UnknownQuestionType
+		return "", internalerrors.UnknownQuestionType
 	}
 
 	sort.Slice(options, func(prev, cur int) bool {
@@ -241,12 +247,15 @@ func (g *Generator) generateQuestion(question *objects.Question, options []*obje
 
 		optionTranslations := g.dbRepo.GetTranslationsByOptionId(option.Id)
 		if optionTranslations == nil {
-			return "", compilederrors.TranslationNotFound
+			return "", internalerrors.TranslationNotFound
 		}
 
 		optionTranslation := optionTranslations[language]
 		if optionTranslation == nil {
-			return "", compilederrors.TranslationNotFound
+			optionTranslation = optionTranslations["en"]
+			if optionTranslation == nil {
+				return "", internalerrors.TranslationNotFound
+			}
 		}
 
 		optionCode = strings.Replace(optionCode, macros.OptionsType, optionsType, 1)
@@ -314,12 +323,4 @@ func (g *Generator) generateOptionsName() string {
 		b[i] = letterBytes[rand.Int63()%int64(len(letterBytes))]
 	}
 	return string(b)
-}
-
-func Map[T, U any](ts []T, f func(T) U) []U {
-	us := make([]U, len(ts))
-	for i := range ts {
-		us[i] = f(ts[i])
-	}
-	return us
 }
