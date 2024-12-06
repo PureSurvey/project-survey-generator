@@ -183,7 +183,10 @@ func (g *Generator) generateQuestion(question *objects.Question, options []*obje
 
 	questionLineTranslation := questionLineTranslations[language]
 	if questionLineTranslation == nil {
-		return "", internalerrors.TranslationNotFound
+		questionLineTranslation = questionLineTranslations["en"]
+		if questionLineTranslation == nil {
+			return "", internalerrors.TranslationNotFound
+		}
 	}
 
 	questionCode = strings.Replace(questionCode, macros.QuestionBlockText, html.EscapeString(questionLineTranslation.Translation), 1)
@@ -212,7 +215,7 @@ func (g *Generator) generateQuestion(question *objects.Question, options []*obje
 	nextButtonCode = strings.Replace(nextButtonCode, macros.QuestionId, strconv.Itoa(question.Id), 1)
 
 	var prevButtonCode string
-	if !isFirstSurvey && question.OrderNumber != 1 {
+	if !isFirstSurvey || isFirstSurvey && question.OrderNumber != 1 {
 		prevButtonCode = template.Code.PrevButton
 		prevButtonText := localisation.PreviousButtonTextByLanguage[language]
 		prevButtonCode = strings.Replace(prevButtonCode, macros.PrevButtonText, prevButtonText, 1)
@@ -249,7 +252,10 @@ func (g *Generator) generateQuestion(question *objects.Question, options []*obje
 
 		optionTranslation := optionTranslations[language]
 		if optionTranslation == nil {
-			return "", internalerrors.TranslationNotFound
+			optionTranslation = optionTranslations["en"]
+			if optionTranslation == nil {
+				return "", internalerrors.TranslationNotFound
+			}
 		}
 
 		optionCode = strings.Replace(optionCode, macros.OptionsType, optionsType, 1)

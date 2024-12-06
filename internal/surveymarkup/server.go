@@ -40,6 +40,10 @@ func (s *Server) GenerateMarkup(ctx context.Context, rq *pb.GenerateMarkupReques
 		return nil, status.Error(codes.NotFound, "")
 	}
 
+	if rq.Language == "" {
+		rq.Language = "en"
+	}
+
 	markup, err := s.generator.Generate(unit, surveys, rq.Language)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
